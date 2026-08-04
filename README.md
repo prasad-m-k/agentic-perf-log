@@ -5,7 +5,6 @@ correcting, and what kind of correction it needed. Not tokens, not
 latency, not CPU cost. This tracks judgment quality: did the agent make
 a good call on the task it was given.
 
-Background on why this exists: [link to your Medium post here].
 
 ## Files
 
