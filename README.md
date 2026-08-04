@@ -8,12 +8,12 @@ a good call on the task it was given.
 
 ## Files
 
-- `agent-correction-tracker.xlsx` — the tracker itself. `Log` tab is where
+- `agent-correction-tracker.xlsx`: the tracker itself. `Log` tab is where
   entries go, `Dashboard` tab summarizes automatically, `README` tab has
   the same instructions as this file.
-- `update_log.py` — lets a script or an AI agent append a row to the Log
+- `update_log.py`: lets a script or an AI agent append a row to the Log
   tab from the command line, instead of a human doing it by hand.
-- `CLAUDE.md` — instructions for coding agents (Claude Code or similar) to
+- `CLAUDE.md`: instructions for coding agents (Claude Code or similar) to
   log their own corrections after a human reviews their work.
 
 ## Quick start
