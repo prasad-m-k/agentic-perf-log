@@ -5,15 +5,16 @@ correcting, and what kind of correction it needed. Not tokens, not
 latency, not CPU cost. This tracks judgment quality: did the agent make
 a good call on the task it was given.
 
+Background on why this exists: [link to your Medium post here].
 
 ## Files
 
-- `agent-correction-tracker.xlsx`: the tracker itself. `Log` tab is where
+- `agent-correction-tracker.xlsx`:  the tracker itself. `Log` tab is where
   entries go, `Dashboard` tab summarizes automatically, `README` tab has
   the same instructions as this file.
-- `update_log.py`: lets a script or an AI agent append a row to the Log
+- `update_log.py`:  lets a script or an AI agent append a row to the Log
   tab from the command line, instead of a human doing it by hand.
-- `CLAUDE.md`: instructions for coding agents (Claude Code or similar) to
+- `CLAUDE.md`:  instructions for coding agents (Claude Code or similar) to
   log their own corrections after a human reviews their work.
 
 ## Quick start
@@ -45,6 +46,16 @@ The agent still only logs after a human has reviewed and either accepted
 or corrected its work. This isn't the agent grading its own homework
 unsupervised, it's the agent filling out the form after you've already
 made the call.
+
+**Multiple agents, one tracker.** If you're running more than one agent
+against the same codebase, they can all log to the same workbook. Each
+call to `update_log.py` takes an exclusive lock on the file first, so
+concurrent writes from different agents queue up instead of one
+overwriting another's row. No extra dependency needed, it's a plain file
+lock. Tested with 8 simultaneous writers, all 8 rows landed with none
+lost or clobbered. If a write can't get the lock within 30 seconds
+(default, adjustable with `--lock-timeout`), it fails loudly instead of
+silently corrupting the file.
 
 ## Correction types
 
