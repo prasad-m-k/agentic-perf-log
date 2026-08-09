@@ -6,7 +6,7 @@ Meant to be called by an agent (Claude Code, or any CLI-driven coding
 assistant) right after a task is reviewed, so the tracker fills itself in
 instead of relying on a human to remember.
 
-Usage:
+Usage (v1 fields, still required):
     python3 update_log.py \
         --task-id TASK-042 \
         --category "Bug Fix" \
@@ -16,6 +16,19 @@ Usage:
         --notes "Off-by-one on empty list input, human fixed before merge" \
         --logged-by agent
 
+Usage (v2 fields, all optional, blank if omitted):
+    python3 update_log.py \
+        --task-id TASK-042 --category "Bug Fix" --corrected yes \
+        --correction-type "Missed Edge Case" \
+        --risk-tier Medium \
+        --spec-completeness 4 \
+        --prompt-turns 2 \
+        --review-time 8 \
+        --est-manual-time 25 \
+        --diff-retention 78.5 \
+        --test-modified no \
+        --non-goal-violation no
+
 Valid --category values:
     Test Generation, New Feature, Refactor, Bug Fix, Documentation,
     Config/Boilerplate, Other
@@ -23,6 +36,25 @@ Valid --category values:
 Valid --correction-type values (only used when --corrected yes):
     Wrong Assumption, Missed Edge Case, Scope Creep, Style Mismatch,
     Logic Error, Other
+
+Valid --risk-tier values:
+    Low, Medium, High
+
+v2 field notes:
+- --spec-completeness is a 1-5 self-rating of how complete the task spec
+  was before the agent started (5 = Goal/Boundaries/Edge cases/Output
+  format/Non-goals all present).
+- --review-time and --est-manual-time are both in minutes. Their ratio
+  is the Review-to-Authored Ratio on the Dashboard tab. Above 1.0 means
+  reviewing the output took longer than writing it by hand would have.
+- --diff-retention is a percentage (0-100): how much of the agent's
+  generated diff survived into the final commit.
+- --test-modified flags whether the agent edited or relaxed an existing
+  test to make its own code pass. This is the one to watch closest.
+- --non-goal-violation flags whether the agent edited files or scope
+  outside what the task spec allowed.
+- All v2 fields default to blank if omitted, so v1-style calls keep
+  working unchanged.
 
 Notes:
 - This appends to the underlying spreadsheet directly. It does not run
@@ -55,6 +87,7 @@ VALID_TYPES = {
     "Wrong Assumption", "Missed Edge Case", "Scope Creep",
     "Style Mismatch", "Logic Error", "Other",
 }
+VALID_TIERS = {"Low", "Medium", "High"}
 
 
 @contextlib.contextmanager
@@ -103,6 +136,16 @@ def main():
     p.add_argument("--logged-by", default="agent")
     p.add_argument("--date", default=None, help="YYYY-MM-DD, defaults to today")
     p.add_argument("--lock-timeout", type=float, default=30, help="Seconds to wait for the file lock before giving up")
+
+    # v2 fields, all optional
+    p.add_argument("--risk-tier", default="", choices=[""] + sorted(VALID_TIERS))
+    p.add_argument("--spec-completeness", type=int, default=None, choices=[None, 1, 2, 3, 4, 5])
+    p.add_argument("--prompt-turns", type=int, default=None)
+    p.add_argument("--review-time", type=float, default=None, help="Minutes spent reviewing the output")
+    p.add_argument("--est-manual-time", type=float, default=None, help="Estimated minutes to write it by hand")
+    p.add_argument("--diff-retention", type=float, default=None, help="Percent of agent diff kept in final commit, 0-100")
+    p.add_argument("--test-modified", default="", choices=["", "yes", "no"])
+    p.add_argument("--non-goal-violation", default="", choices=["", "yes", "no"])
     args = p.parse_args()
 
     if args.corrected == "yes" and not args.correction_type:
@@ -126,6 +169,13 @@ def main():
                     row = r
             row += 1
 
+            def yn(val):
+                if val == "yes":
+                    return "Y"
+                if val == "no":
+                    return "N"
+                return ""
+
             values = [
                 date,
                 args.task_id,
@@ -135,6 +185,14 @@ def main():
                 args.correction_type,
                 args.notes,
                 args.logged_by,
+                args.risk_tier,
+                args.spec_completeness if args.spec_completeness is not None else "",
+                args.prompt_turns if args.prompt_turns is not None else "",
+                args.review_time if args.review_time is not None else "",
+                args.est_manual_time if args.est_manual_time is not None else "",
+                args.diff_retention if args.diff_retention is not None else "",
+                yn(args.test_modified),
+                yn(args.non_goal_violation),
             ]
             for col, v in enumerate(values, start=1):
                 log.cell(row=row, column=col, value=v)
